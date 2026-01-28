@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Focus Guard</title>
     <link rel="stylesheet" href="../css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">    <link rel="stylesheet" href="../css/themes/dark.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/themes/dark.css">
     <base href="/focus-guard/">
-    </script>
 </head>
 <body>
     <header>
@@ -38,18 +38,20 @@
             <button id="help" class="action-btn">
                 <span class="btn-icon">❓</span>
                 <span class="btn-text">Help</span>
-                <span class="btn-description">Get assistance</span>            </button>
+                <span class="btn-description">Get assistance</span>
+            </button>
         </div>
     </main>
     
-    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
     <script type="module">
         import { app, db, auth, analytics } from '../js/firebase.js';
         import { DatabaseService } from '../js/databaseservice.js';
         import { ThemeManager } from '../js/features/theme.js';
         import { NotificationManager } from '../js/features/notifications.js';
         
-        let dbService;        document.addEventListener('DOMContentLoaded', async () => {
+        let dbService;
+        
+        document.addEventListener('DOMContentLoaded', async () => {
             try {
                 // Show loading state
                 document.body.classList.add('loading');
@@ -112,7 +114,8 @@
                 });
                 
                 // Hide loading state
-                document.body.classList.remove('loading');            } catch (error) {
+                document.body.classList.remove('loading');
+            } catch (error) {
                 console.error('Failed to initialize:', error);
                 document.body.classList.remove('loading');
                 document.body.classList.add('error');
