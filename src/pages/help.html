@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help - Focus Guard</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/themes/dark.css">
+</head>
+<body>
+    <header>
+        <h1>Help & Support</h1>
+        <button onclick="window.location.href='index.html'" class="action-btn">Back to Home</button>
+    </header>
+    <main class="help-container">
+        <section class="help-section">
+            <h2>Getting Started</h2>
+            <ul>
+                <li>Click "Start Focus Session" to begin a focus timer</li>
+                <li>Choose your preferred focus duration</li>
+                <li>Stay focused until the timer ends</li>
+            </ul>
+        </section>
+        
+        <section class="help-section">
+            <h2>FAQ</h2>
+            <div class="faq-item">
+                <h3>How does Focus Guard work?</h3>
+                <p>Focus Guard helps you maintain concentration by using timed work sessions.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Need more help?</h3>
+                <p>Contact us at support@focusguard.com</p>
+            </div>
+        </section>
+    </main>
+    <script src="../js/main.js"></script>
+    <script src="../js/features/theme.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new ThemeManager();
+        });
+    </script>
+</body>
+</html>

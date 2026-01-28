@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Statistics - Focus Guard</title>
+    <link rel="stylesheet" href="../css/styles.css">    <link rel="stylesheet" href="../css/themes/dark.css">
+</head>
+<body class="statistics-page">
+    <header>
+        <h1>Statistics</h1>
+        <button onclick="window.location.href='index.html'" class="action-btn">Back</button>
+    </header>
+    <main>
+        <div class="stats-container">
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <h3>Total Sessions</h3>
+                    <div class="stat-value" id="totalSessions">0</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Focus Time</h3>
+                    <div class="stat-value" id="totalFocusTime">0 mins</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Average Session Length</h3>
+                    <div class="stat-value" id="avgSessionLength">0 mins</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Tasks Completed Today</h3>
+                    <div class="stat-value" id="tasksToday">0</div>
+                </div>
+            </div>
+            
+            <div class="completed-tasks-section">
+                <h2>Completed Tasks History</h2>
+                <div class="task-filters">
+                    <select id="timeFilter">
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+                <div class="completed-tasks-list" id="completedTasksList">
+                    <!-- Tasks will be populated here -->
+                </div>
+            </div>
+            
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3>Weekly Focus Time</h3>
+                    <canvas id="weeklyFocusChart"></canvas>
+                </div>
+                <div class="chart-wrapper">
+                    <h3>Task Completion by Day</h3>
+                    <canvas id="taskCompletionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+      <script type="module">
+        import { app, db, auth, analytics } from '../js/firebase.js';
+        import { DatabaseService } from '../js/databaseservice.js';
+        import { ThemeManager } from '../js/features/theme.js';
+        
+        let dbService;
+        let initialized = false;
+        
+        // Format date to readable string
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+        
+        // Format duration to readable string
+        function formatDuration(minutes) {
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+        }
+
+        // Create detailed task card with all stored information
+        function createTaskCard(task) {
+            const card = document.createElement('div');
+            card.className = 'task-card';
+            
+            const taskDetails = `
+                <div class="task-header">
+                    <h3>${task.name}</h3>
+                    <span class="task-status">${task.completed ? 'Completed' : 'In Progress'}</span>
+                </div>
+                <div class="task-details">
+                    <div class="detail-row">
+                        <span class="label">Task ID:</span>
+                        <span class="value">${task.id}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Created:</span>
+                        <span class="value">${formatDate(task.createdAt)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Completed:</span>
+                        <span class="value">${task.completedAt ? formatDate(task.completedAt) : 'Not completed'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">Duration:</span>
+                        <span class="value">${formatDuration(task.duration)}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="label">User ID:</span>
+                        <span class="value">${task.userId || 'Not assigned'}</span>
+                    </div>
+                </div>
+            `;
+            
+            card.innerHTML = taskDetails;
+            return card;
+        }
+
+        // Filter tasks by time period
+        function filterTasks(tasks, period) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            return tasks.filter(task => {
+                const taskDate = new Date(task.completedAt);
+                switch (period) {
+                    case 'today':
+                        return taskDate >= today;
+                    case 'week':
+                        const weekAgo = new Date(today);
+                        weekAgo.setDate(weekAgo.getDate() - 7);
+                        return taskDate >= weekAgo;
+                    case 'month':
+                        const monthAgo = new Date(today);
+                        monthAgo.setMonth(monthAgo.getMonth() - 1);
+                        return taskDate >= monthAgo;
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        // Render completed tasks
+        function renderCompletedTasks(tasks) {
+            const listElement = document.getElementById('completedTasksList');
+            if (!listElement) return;
+            
+            listElement.innerHTML = tasks.length ? '' : '<p class="no-tasks">No completed tasks in this period</p>';
+            
+            tasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+                 .forEach(task => {
+                const taskElement = document.createElement('div');
+                taskElement.className = 'completed-task-item';
+                taskElement.innerHTML = `
+                    <div class="task-name">${task.name}</div>
+                    <div class="task-duration">${formatDuration(task.duration)}</div>
+                    <div class="task-date">${formatDate(task.completedAt)}</div>
+                `;
+                listElement.appendChild(taskElement);
+            });
+            
+            // Update statistics
+            document.getElementById('totalSessions').textContent = tasks.length;
+            const totalMinutes = tasks.reduce((sum, task) => sum + task.duration, 0);
+            document.getElementById('totalFocusTime').textContent = formatDuration(totalMinutes);
+            document.getElementById('avgSessionLength').textContent = tasks.length ? 
+                formatDuration(Math.round(totalMinutes / tasks.length)) : '0m';
+            
+            const todayTasks = filterTasks(tasks, 'today');
+            document.getElementById('tasksToday').textContent = todayTasks.length;
+        }
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Show loading state
+                document.body.classList.add('loading');
+                
+                // Initialize services
+                dbService = new DatabaseService();
+                await dbService.init();
+
+                // Get DOM elements
+                const completedTasksList = document.getElementById('completedTasksList');
+                const timeFilter = document.getElementById('timeFilter');
+                
+                // Initialize loading state
+                completedTasksList.innerHTML = '<p class="loading-message">Loading tasks...</p>';                // Function to fetch and display tasks
+                async function fetchAndDisplayTasks() {
+                    console.log('Fetching tasks for statistics page...');
+                    try {
+                        console.log('Requesting completed tasks from Firebase...');
+                        const tasks = await dbService.firebase.getCompletedTasks();
+                        console.log('Raw tasks from Firebase:', tasks);
+
+                        if (!tasks || tasks.length === 0) {
+                            console.log('No tasks found in Firebase');
+                            completedTasksList.innerHTML = '<p class="no-tasks">No completed tasks found.</p>';
+                            updateStatistics([]);
+                            return;
+                        }
+
+                        const currentFilter = timeFilter.value;
+                        console.log('Applying time filter:', currentFilter);
+                        const filteredTasks = filterTasks(tasks, currentFilter);
+                        console.log('Filtered tasks:', filteredTasks);
+
+                        // Debug information in the UI
+                        const debugInfo = document.createElement('div');
+                        debugInfo.className = 'debug-info';
+                        debugInfo.innerHTML = `
+                            <details>
+                                <summary>Debug Information</summary>
+                                <div class="debug-content">
+                                    <p>Total tasks in Firebase: ${tasks.length}</p>
+                                    <p>Tasks after filtering: ${filteredTasks.length}</p>
+                                    <p>Current filter: ${currentFilter}</p>
+                                    <pre>${JSON.stringify(filteredTasks, null, 2)}</pre>
+                                </div>
+                            </details>
+                        `;
+                        completedTasksList.appendChild(debugInfo);
+
+                        displayTasks(filteredTasks);
+                        updateStatistics(filteredTasks);
+
+                    } catch (error) {
+                        console.error('Error fetching tasks:', error);
+                        completedTasksList.innerHTML = '<p class="error-message">Failed to load tasks. Please try again.</p>';
+                    }
+                }
+
+                // Function to display tasks
+                function displayTasks(tasks) {
+                    completedTasksList.innerHTML = '';
+                    
+                    if (tasks.length === 0) {
+                        completedTasksList.innerHTML = '<p class="no-tasks">No tasks found for the selected period.</p>';
+                        return;
+                    }
+
+                    // Sort tasks by completion date (newest first)
+                    tasks.sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+                         .forEach(task => {
+                        const taskCard = createTaskCard(task);
+                        completedTasksList.appendChild(taskCard);
+                    });
+                }
+
+                // Function to update statistics
+                function updateStatistics(tasks) {
+                    document.getElementById('totalSessions').textContent = tasks.length;
+                    
+                    const totalMinutes = tasks.reduce((sum, task) => sum + (task.duration || 0), 0);
+                    document.getElementById('totalFocusTime').textContent = formatDuration(totalMinutes);
+                    
+                    const avgMinutes = tasks.length ? Math.round(totalMinutes / tasks.length) : 0;
+                    document.getElementById('avgSessionLength').textContent = formatDuration(avgMinutes);
+                    
+                    const todayTasks = filterTasks(tasks, 'today');
+                    document.getElementById('tasksToday').textContent = todayTasks.length;
+                }
+
+                // Load settings for theme
+                const settings = await dbService.getSettings() || { theme: 'light' };
+                new ThemeManager(settings.theme);
+
+                // Add event listener for time filter changes
+                timeFilter.addEventListener('change', () => {
+                    fetchAndDisplayTasks();
+                });
+
+                // Initial load of tasks
+                await fetchAndDisplayTasks();
+
+                // Hide loading state
+                document.body.classList.remove('loading');
+
+            } catch (error) {
+                console.error('Failed to initialize statistics:', error);
+                document.body.classList.remove('loading');
+                document.body.classList.add('error');
+                
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'error-message';
+                errorMessage.textContent = 'Failed to load statistics. Please refresh the page.';
+                document.querySelector('.stats-container')?.prepend(errorMessage);
+            }
+        });
+    </script>
+    
+    <style>
+        .completed-tasks-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: var(--surface-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .task-filters {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        
+        .task-filters select {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color, #ddd);
+            background: var(--surface-color, white);
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        
+        .completed-task-item {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .completed-task-item:last-child {
+            border-bottom: none;
+        }
+        
+        .task-name {
+            font-weight: 500;
+        }
+        
+        .task-duration {
+            color: var(--accent-color);
+        }
+        
+        .task-date {
+            color: var(--text-secondary-color);
+            font-size: 0.9em;
+        }
+        
+        .no-tasks {
+            text-align: center;
+            color: var(--text-secondary-color);
+            padding: 2rem;
+            font-style: italic;
+        }
+        
+        .loading-message {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary, #666);
+            font-style: italic;
+        }
+        
+        .error-message {
+            background-color: var(--error-bg, #fee);
+            color: var(--error-color, #c00);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .task-card {
+            background: var(--surface-color, white);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-color, #4CAF50);
+        }
+
+        .detail-row {
+            display: grid;
+            grid-template-columns: 150px 1fr;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.1));
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-row .label {
+            font-weight: 500;
+            color: var(--text-secondary, #666);
+        }
+
+        .detail-row .value {
+            text-align: right;
+            color: var(--text-primary, #333);
+        }
+
+        .task-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            background-color: var(--primary-color, #4CAF50);
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .debug-info {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: var(--surface-color, #f5f5f5);
+            border: 1px solid var(--border-color, #ddd);
+            border-radius: 4px;
+        }
+
+        .debug-info summary {
+            cursor: pointer;
+            padding: 0.5rem;
+            font-weight: 500;
+            color: var(--text-secondary, #666);
+        }
+
+        .debug-info .debug-content {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: var(--background-color, #fff);
+            border-radius: 4px;
+        }
+
+        .debug-info pre {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9rem;
+            background: var(--code-bg, #f8f8f8);
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .debug-info p {
+            margin: 0.5rem 0;
+            color: var(--text-secondary, #666);
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Focus Guard</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/themes/dark.css">
+</head>
+<body>
+    <header>
+        <h1>Settings</h1>
+        <button onclick="window.location.href='index.html'" class="action-btn">Back</button>
+    </header>
+    <main>x
+        <div class="settings-container">
+            <div class="settings-group">
+                <h2>Timer Settings</h2>
+                <div class="setting-item">
+                    <label for="enableNotifications">Enable Notifications</label>
+                    <input type="checkbox" id="enableNotifications" checked>
+                </div>
+                <div class="setting-item">
+                    <label for="soundEnabled">Enable Sound</label>
+                    <input type="checkbox" id="soundEnabled" checked>
+                </div>
+                <button id="saveSettings" class="action-btn primary">Save Settings</button>
+            </div>
+        </div>
+    </main>    <script type="module">
+        import { ThemeManager } from '../js/features/theme.js';
+        import { SettingsManager } from '../js/settings.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            new ThemeManager();
+            new SettingsManager();
+        });
+    </script>
+</body>
+</html>

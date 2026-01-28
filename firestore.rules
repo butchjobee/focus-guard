@@ -1,0 +1,10 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public access to all data since we're not using authentication
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

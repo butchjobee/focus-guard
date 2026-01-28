@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Guard</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">    <link rel="stylesheet" href="../css/themes/dark.css">
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Focus Guard</h1>
+        <p class="tagline">Stay focused, be productive</p>
+    </header>
+    <main> 
+        <div class="welcome-section">
+            <h2>Welcome to Focus Guard</h2>
+            <p>Choose what you'd like to do:</p>
+        </div>
+        <div class="button-container">
+            <button id="startFocus" class="action-btn primary">
+                <span class="btn-icon">⏱️</span>
+                <span class="btn-text">Start Focus Session</span>
+                <span class="btn-description">Begin a timed focus period</span>
+            </button>
+            <button id="settings" class="action-btn">
+                <span class="btn-icon">⚙️</span>
+                <span class="btn-text">Settings</span>
+                <span class="btn-description">Customize your experience</span>
+            </button>
+            <button id="statistics" class="action-btn">
+                <span class="btn-icon">📊</span>
+                <span class="btn-text">Statistics</span>
+                <span class="btn-description">View your progress</span>
+            </button>
+            <button id="help" class="action-btn">
+                <span class="btn-icon">❓</span>
+                <span class="btn-text">Help</span>
+                <span class="btn-description">Get assistance</span>            </button>
+        </div>
+    </main>
+    
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script type="module">
+        import { app, db, auth, analytics } from '../js/firebase.js';
+        import { DatabaseService } from '../js/databaseservice.js';
+        import { ThemeManager } from '../js/features/theme.js';
+        import { NotificationManager } from '../js/features/notifications.js';
+        
+        let dbService;        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Show loading state
+                document.body.classList.add('loading');
+                
+                // Initialize database service
+                dbService = new DatabaseService();
+                await dbService.init();
+                
+                // Load settings first with fallback defaults
+                const settings = await dbService.getSettings() || {
+                    focusDuration: 25,
+                    theme: 'light',
+                    enableNotifications: false
+                };
+                
+                // Initialize managers with settings
+                const theme = new ThemeManager(settings.theme || 'light');
+                
+                // Initialize notifications if enabled
+                if (settings.enableNotifications) {
+                    const notifications = new NotificationManager();
+                }
+                
+                // Setup button handlers
+                document.getElementById('startFocus').addEventListener('click', () => {
+                    window.location.href = 'focus-session.html';
+                });
+                
+                document.getElementById('settings').addEventListener('click', () => {
+                    window.location.href = 'settings.html';
+                });
+                
+                document.getElementById('statistics').addEventListener('click', () => {
+                    window.location.href = 'statistics.html';
+                });
+                
+                document.getElementById('help').addEventListener('click', () => {
+                    window.location.href = 'help.html';
+                });
+                
+                // Set initial focus duration from settings
+                const focusDurationInput = document.getElementById('focusDuration');
+                if (focusDurationInput && settings.focusDuration) {
+                    focusDurationInput.value = settings.focusDuration;
+                }
+                
+                // Save focus duration changes
+                focusDurationInput?.addEventListener('change', async (e) => {
+                    try {
+                        const newDuration = parseInt(e.target.value);
+                        if (newDuration >= 1 && newDuration <= 120) {
+                            await dbService.saveSettings({
+                                ...settings,
+                                focusDuration: newDuration
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Failed to save focus duration:', error);
+                    }
+                });
+                
+                // Hide loading state
+                document.body.classList.remove('loading');            } catch (error) {
+                console.error('Failed to initialize:', error);
+                document.body.classList.remove('loading');
+                document.body.classList.add('error');
+                
+                // Create error message
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'error-message';
+                errorMessage.textContent = 'Failed to load application. Please refresh the page.';
+                
+                // Insert error message after the welcome section
+                const welcomeSection = document.querySelector('.welcome-section');
+                if (welcomeSection) {
+                    welcomeSection.after(errorMessage);
+                } else {
+                    document.body.appendChild(errorMessage);
+                }
+            }
+        });
+    </script>
+    <style>
+        .error-message {
+            background-color: #fee;
+            color: #c00;
+            padding: 1rem;
+            margin: 1rem;
+            border: 1px solid #fcc;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</body>
+</html>
