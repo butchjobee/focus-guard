@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Focus Guard</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../css/themes/dark.css">
-    <base href="/focus-guard/src/pages/">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/themes/dark.css">
+    <base href="/focus-guard/">
 </head>
 <body>
     <header>
@@ -44,10 +43,10 @@
     </main>
     
     <script type="module">
-        import { app, db, auth, analytics } from '../js/firebase.js';
-        import { DatabaseService } from '../js/databaseservice.js';
-        import { ThemeManager } from '../js/features/theme.js';
-        import { NotificationManager } from '../js/features/notifications.js';
+        import { app, db, auth, analytics } from './js/firebase.js';
+        import { DatabaseService } from './js/databaseservice.js';
+        import { ThemeManager } from './js/features/theme.js';
+        import { NotificationManager } from './js/features/notifications.js';
         
         let dbService;
         
